@@ -11,4 +11,4 @@ df.recon <- df.recon |>
   st_set_crs(value = 4283) |> # set crs (GDA94/GRS 1980)
   st_transform(crs = 3857) # transform to web mercator
 
-st_write(df.recon, "out/recon_sites.kml")
+st_write(df.recon, "out/recon_sites.kml", append = FALSE)
