@@ -1,0 +1,5 @@
+.DS_Store
+.Rproj.user
+*.Rproj
+
+dat/2023/Landholders.xlsx
