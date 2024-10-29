@@ -1,0 +1,12 @@
+# time to detection model in JAGS
+model{
+  # priors
+  p.occ ~ dbeta(1, 1)
+  lambda ~ dunif(0, 1)
+  
+  for (ii in 1:n.obs){
+    p.p[ii] <- 1-exp(-1*lambda*time[ii]) # probability observed if present
+    occ[ii] ~ dbern(p.occ) # present at site?
+    obs[ii] ~ dbern(occ[ii]*p.p[ii]) # observed present with this probability
+  }
+}
