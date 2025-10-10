@@ -1,12 +1,12 @@
 # time to detection model in JAGS
 model{
   # priors
-  p.occ ~ dbeta(1, 1)
+  p.occ ~ dunif(0, 1)
   lambda ~ dunif(0, 1)
   
   for (ii in 1:n.obs){
-    p.p[ii] <- 1-exp(-1*lambda*time[ii]) # probability observed if present
-    occ[ii] ~ dbern(p.occ) # present at site?
-    obs[ii] ~ dbern(occ[ii]*p.p[ii]) # observed present with this probability
+    ttd[ii] ~ dexp(lambda) # time to detection
+    occ[ii] ~ dbern(p.occ) # latent variable. present at site?
+    censored[ii] ~ dbern(occ[ii]*step(ttd[ii] - tmax.i[ii]) + (1-occ[ii])) # model for non-detections
   }
 }
