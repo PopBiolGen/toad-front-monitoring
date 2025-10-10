@@ -3,19 +3,36 @@ library(tidyverse)
 library(readxl)
 library(sf)
 
+# 2025 visual survey data (from Fulcrum)
+df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys") |>
+  select(-(2:5), -photos, - audio) |>
+  mutate(year = year(date),
+         month = month(date),
+         day = day(date)
+  )
+
+#2023-4 visual survey data
 df.recon <- read_excel(path = "dat/invasion-front-reconnaissance-data.xlsx", sheet = "recon_data")
 
 df.recon <- df.recon |>
   mutate(hour = hour(time), 
          minute = minute(time), 
-         date = as.Date(paste(year, month, day, sep = "-")),
-         ttd.censored = ifelse(toad.present==1, person.minutes, NA), # only report ttd for positive sighting
-         censored = as.numeric(toad.present==0)) |> # censored, or not?
-  st_as_sf(coords = c("lon", "lat")) |>
+         date = as.Date(date),
+         ttd = how_many_p*search_tim,
+         ttd.censored = ifelse(any_cane_t=="yes", ttd, NA), # only report ttd for positive sighting
+         censored = as.numeric(any_cane_t=="no")) |> # censored, or not?
+  st_as_sf(coords = c("X_longitude", "X_latitude")) |>
   st_set_crs(value = 4283) |> # set crs (GDA94/GRS 1980)
-  st_transform(crs = 3857) # transform to web mercator
+  st_transform(crs = st_crs(df.fulcrum)) # transform to whatever comes from fulcrum
 
-st_write(df.recon, "out/recon_sites.kml", append = FALSE)
+# merge the datasets
+df <- bind_rows(df.fulcrum, df.recon)
+
+
+# st_write(df.recon, "out/recon_sites.kml", append = FALSE)
+
+
+
 
 # # get missing temperature data from SILO
 # fetch_temps <- function(df){
