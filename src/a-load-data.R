@@ -4,7 +4,7 @@ library(readxl)
 library(sf)
 
 # 2025 visual survey data (from Fulcrum)
-df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys") |>
+df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys", layer = "toad_surveys") |>
   select(-(2:5), -photos, - audio, -X_latitude, -X_longitude) |>
   mutate(year = year(date),
          month = month(date),
@@ -12,9 +12,7 @@ df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys") |>
   )
 
 #2023-4 visual survey data
-df.recon <- read_excel(path = "dat/invasion-front-reconnaissance-data.xlsx", sheet = "recon_data")
-
-df.recon <- df.recon |>
+df.recon <- read_excel(path = "dat/invasion-front-reconnaissance-data.xlsx", sheet = "recon_data") |>
   mutate(hour = hour(time), 
          minute = minute(time), 
          date = as.Date(date),
@@ -27,7 +25,7 @@ df.recon <- df.recon |>
 
 # merge the datasets
 df <- bind_rows(df.fulcrum, df.recon)
-
+rm(df.recon, df.fulcrum)
 
 # st_write(df.recon, "out/recon_sites.kml", append = FALSE)
 
