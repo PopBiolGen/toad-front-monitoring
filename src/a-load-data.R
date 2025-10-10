@@ -5,7 +5,7 @@ library(sf)
 
 # 2025 visual survey data (from Fulcrum)
 df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys") |>
-  select(-(2:5), -photos, - audio) |>
+  select(-(2:5), -photos, - audio, -X_latitude, -X_longitude) |>
   mutate(year = year(date),
          month = month(date),
          day = day(date)
