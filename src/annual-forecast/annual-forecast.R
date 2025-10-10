@@ -1,6 +1,7 @@
 # load survey data
 source("src/a-load-data.R")
 library(alphahull)
+library(ggplot2)
 
 # load waterpoint data
 df.wp <- read.csv(file = "../spread-model/dat/waterpoint-data_LaGrange.csv") |>
@@ -57,10 +58,20 @@ alpha_polygon_sf <- st_sf(geometry = polygon) |>
 # Find waterpoints inside the alpha hull
 df.wp$colonised[st_within(df.wp, alpha_polygon_sf, sparse = FALSE)] <- 1
 
-
-library(ggplot2)
+# plot to check
 ggplot() +
   geom_sf(data = df.wp, color = "red", size = 2) +
   geom_sf(data = alpha_polygon_sf, fill = "lightblue", color = "blue", alpha = 0.5) +
   theme_minimal() +
   labs(title = "Spatial Points and Alpha Hull Polygon")
+
+# Create a buffered polygon to select points on which to run the model
+buffered.polygon <- alpha_polygon_sf |> 
+  st_transform(crs = 3577) |> 
+  st_buffer(dist = 2e5) |> # 200km buffer
+  st_transform(st_crs(df.wp))
+
+# Select points
+df.model.pts <-  filter(df.wp, st_within(df.wp, buffered.polygon, sparse = FALSE)) |> 
+  st_transform(crs = 3577)
+
