@@ -39,5 +39,7 @@ pop.out <- do.call("rbind", pop.out) |>
   st_as_sf(coords = c("X", "Y"), remove = FALSE) |>
   st_set_crs(value = 3577) |> 
   st_transform(crs = st_crs(df.wp)) |> 
-  st_write(dsn = paste0("out/", year(Sys.Date()), "-forecast.shp"), driver = "ESRI Shapefile")
+  st_write(dsn = paste0("out/", year(Sys.Date()), "-forecast.shp"), 
+           driver = "ESRI Shapefile",
+           append = FALSE)
 

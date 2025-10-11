@@ -13,12 +13,14 @@ df.wp <- read.csv(file = "../spread-model/dat/waterpoint-data_LaGrange.csv") |>
   st_transform(crs = st_crs(df)) # transform to whatever comes from fulcrum
 
 # load additional waterpoints from Tim
-d_extra <- st_read("../spread-model/dat/tims_points.kml") |>
+d_extra <- st_read("../spread-model/dat/tims_points.kml") |> 
+  st_transform(crs = 3577) #|> 
+  #st_zm(drop = TRUE, what = "Z") # drop Z dimension
+d_extra <- cbind(d_extra, st_coordinates(d_extra)) |>
   st_transform(crs = st_crs(df)) |> # convert to fulcrum crs
-  st_coordinates() |> 
-  as.data.frame() |>
-  mutate(origin_des = 0, ndays_1 = 34, colonised = 0, TCZ = 0) |>
-  select(-Z)
+  select(X, Y, geometry) |> 
+  mutate(origin_des = 0, ndays_1 = 34, colonised = 0, TCZ = 0)
+
 
 # bind the two sets
 df.wp <- bind_rows(df.wp, d_extra)

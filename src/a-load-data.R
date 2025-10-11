@@ -23,9 +23,18 @@ df.recon <- read_excel(path = "dat/invasion-front-reconnaissance-data.xlsx", she
   st_set_crs(value = 4283) |> # set crs (GDA94/GRS 1980)
   st_transform(crs = st_crs(df.fulcrum)) # transform to whatever comes from fulcrum
 
+# non-surveyed points
+## These added to fill out the alpha hull, but not actually surveyed
+X.ns <- c(-921351, -888286, -876303) 
+Y.ns <- c(-1891416, -1877100, -1865818)
+df.ns <- data.frame(X_longitude = X.ns, X_latitude = Y.ns, any_cane_t = "yes") |> 
+  st_as_sf(coords = c("X_longitude", "X_latitude")) |> 
+  st_set_crs(value = 3577) |> # set crs (Albers)
+  st_transform(crs = st_crs(df.fulcrum))
+
 # merge the datasets
-df <- bind_rows(df.fulcrum, df.recon)
-rm(df.recon, df.fulcrum)
+df <- bind_rows(df.fulcrum, df.recon, df.ns)
+rm(df.recon, df.fulcrum, df.ns)
 
 # st_write(df.recon, "out/recon_sites.kml", append = FALSE)
 
