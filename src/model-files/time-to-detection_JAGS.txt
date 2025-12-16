@@ -5,8 +5,9 @@ model{
   lambda ~ dunif(0, 1)
   
   for (ii in 1:n.obs){
-    ttd[ii] ~ dexp(lambda) # time to detection
-    occ[ii] ~ dbern(p.occ) # latent variable. present at site?
-    censored[ii] ~ dbern(occ[ii]*step(ttd[ii] - tmax.i[ii]) + (1-occ[ii])) # model for non-detections
+    ttd[ii] ~ dexp(lambda) # time to detection, for sites with a detection
+    occ[ii] ~ dbern(p.occ) # latent variable. Present at site?
+    is.detected[ii] ~ dbern(p.detect[ii]) # detected, or not
+    p.detect[ii] <- occ[ii]*(1-exp(-lambda*tmax.i[ii])) # probability of detection
   }
 }
