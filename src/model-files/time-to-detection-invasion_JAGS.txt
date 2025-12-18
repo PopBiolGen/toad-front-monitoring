@@ -1,0 +1,13 @@
+# time to detection model in JAGS
+model{
+  # priors
+  p.occ ~ dunif(0, 1)
+  lambda ~ dunif(0, 1)
+  
+  for (ii in 1:n.obs){
+    ttd[ii] ~ dexp(lambda) # time to detection, for sites with a detection
+    occ[ii] ~ dbern(p.occ) # latent variable. Present at site?
+    is.detected[ii] ~ dbern(p.detect[ii]) # detected, or not
+    p.detect[ii] <- occ[ii]*(1-exp(-lambda*tmax.i[ii])) # probability of detection
+  }
+}
