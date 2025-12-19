@@ -3,7 +3,7 @@
 model{
   # priors
   lambda ~ dunif(0, 1)
-  beta ~ dnorm(0, 1/4) # sensible prior given logit space
+  beta ~ dunif(0,4) # sensible prior given logit space
   a ~ dnorm(0, 1e-8) # very flat given scale is in metres
   b ~ dnorm(0, 1e-6) # could do better on this given history of invasion, but uninformative for now
   c ~ dunif(1e4, 5e4) # invasion speed, to the west, in m/year

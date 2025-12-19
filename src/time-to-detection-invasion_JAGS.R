@@ -25,7 +25,8 @@ data.list <- list(ttd = in.dat$p.m.positive, # time to detection data (NA's wher
                   y = in.dat$Y.c,
                   t = in.dat$year-min(in.dat$year))
 init.list <- list(lambda = 1/10, 
-                  occ = ifelse(data.list$is.detected == 1, 1, rbinom(length(data.list$is.detected), 1, 0.2)))
+                  occ = ifelse(data.list$is.detected == 1, 1, rbinom(length(data.list$is.detected), 1, 0.2)),
+                  beta = 0)
 
 # the model
 ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion_JAGS.txt", 
