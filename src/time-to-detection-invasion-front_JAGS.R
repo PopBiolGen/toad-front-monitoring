@@ -1,8 +1,11 @@
+# to estimate the current position of the invasion front
+# uses latest year's data + presences from previous years
 source("src/a-load-data.R")
 library(rjags)
 
 # select the relevant data
-in.dat <- filter(df, water_available == "available" & survey_type == "nocturnal")
+in.dat <- filter(df, water_available == "available" & survey_type == "nocturnal") |> 
+  filter(year == max(year) | toad.present == 1) # get latest year's data + any positive records from previous years
 
 # get x, y coordinates for each record, in metres and add to dataframe
 proj.coords <- in.dat |> 
@@ -22,14 +25,13 @@ data.list <- list(ttd = in.dat$p.m.positive, # time to detection data (NA's wher
                   tmax.i = in.dat$person.minutes,
                   n.obs = nrow(in.dat),
                   x = in.dat$X.c,
-                  y = in.dat$Y.c,
-                  t = in.dat$year-min(in.dat$year))
+                  y = in.dat$Y.c)
 init.list <- list(lambda = 1/10, 
                   occ = ifelse(data.list$is.detected == 1, 1, rbinom(length(data.list$is.detected), 1, 0.2)),
                   beta = 0)
 
 # the model
-ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion_JAGS.txt", 
+ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion-front_JAGS.txt", 
            data = data.list, 
            inits = init.list,
            n.chains = 3)
@@ -38,8 +40,7 @@ ttd.samp<-coda.samples(ttd.mod,
                 variable.names = c("lambda",
                                    "beta",
                                    "a",
-                                   "b",
-                                   "c"), 
+                                   "b"), 
                 n.iter = 10000, 
                 thin = 5)
 gelman.diag(ttd.samp)
@@ -47,27 +48,10 @@ gelman.diag(ttd.samp)
 (mod1 <- summary(ttd.samp))
 coda::densplot(ttd.samp)
 
+# make a plot of estimated line
+line.slope <- mod1$quantiles["a", "50%"]
+line.intercept <- mod1$quantiles["b", "50%"]
+ggplot(data = in.dat, aes(x = X.c, y = Y.c, col = toad.present)) +
+  geom_point() +
+  geom_abline(slope = line.slope, intercept = line.intercept)
 
-# plot cumulative probability of detection with time
-cum.exp <- function(t, lam){
-  1-exp(-lam*t)
-}
-time <- seq(0, 30, 0.2) # 0-30 minutes
-y.mean <- cum.exp(time, mod1$quantiles["lambda", "50%"])
-y.upp <- cum.exp(time, mod1$quantiles["lambda", "2.5%"])
-y.low <- cum.exp(time, mod1$quantiles["lambda", "97.5%"])
-
-pdat <- data.frame(Time = time, y.mean, y.low, y.upp) #|> 
-
-ggplot(data = pdat, aes(x = Time)) +
-    geom_ribbon(
-    aes(ymin = y.low,
-        ymax = y.upp),
-    fill = "lightblue", alpha = 0.3
-  ) +
-  geom_line(aes(y = y.mean)) +
-  labs(x = "Person minutes", y = "Detection probability")
-ggsave(filename = "out/detection-plot.pdf") 
-
-ggplot(data = in.dat) +
-  geom_histogram(aes(x = p.m.positive))
