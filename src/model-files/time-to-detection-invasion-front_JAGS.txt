@@ -1,12 +1,11 @@
 # time to detection model in JAGS
-# infers invasion speed and front orientation in the occupancy side of the model
+# infers current location of the invasion front
 model{
   # priors
   lambda ~ dunif(0, 1)
   beta ~ dunif(0,4) # sensible prior given logit space
   a ~ dnorm(0, 1e-8) # very flat given scale is in metres
   b ~ dnorm(0, 1e-6) # could do better on this given history of invasion, but uninformative for now
-  c ~ dunif(1e4, 5e4) # invasion speed, to the west, in m/year
   
   for (ii in 1:n.obs){
     # time to detection
@@ -15,7 +14,7 @@ model{
     # occupancy
     occ[ii] ~ dbern(p.occ[ii]) # latent variable. Present at site?
     logit(p.occ[ii]) <- beta * d[ii] #occupancy as a function of distance from invasion front
-    d[ii] <- (y[ii]-a*(x[ii]+c*t[ii])-b)/sqrt(1+a^2) # perpendicular distance to line at t[ii]
+    d[ii] <- (y[ii]-a*x[ii]-b)/sqrt(1+a^2) # perpendicular distance to line at t[ii]
     
     # detected, or not, given occupancy and inferred distribution of time to detection
     is.detected[ii] ~ dbern(p.detect[ii]) # detected, or not
