@@ -27,8 +27,8 @@ data.list <- list(ttd = in.dat$p.m.positive, # time to detection data (NA's wher
                   x = in.dat$X.c,
                   y = in.dat$Y.c)
 init.list <- list(lambda = 1/10, 
-                  occ = ifelse(data.list$is.detected == 1, 1, rbinom(length(data.list$is.detected), 1, 0.2)),
-                  beta = 0)
+                  a = -3,
+                  b = -100000)
 
 # the model
 ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion-front_JAGS.txt", 
@@ -38,7 +38,6 @@ ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion-front_J
 update(ttd.mod, n.iter = 5000) # burn in
 ttd.samp<-coda.samples(ttd.mod, 
                 variable.names = c("lambda",
-                                   "beta",
                                    "a",
                                    "b"), 
                 n.iter = 10000, 
@@ -49,9 +48,31 @@ gelman.diag(ttd.samp)
 coda::densplot(ttd.samp)
 
 # make a plot of estimated line
-line.slope <- mod1$quantiles["a", "50%"]
-line.intercept <- mod1$quantiles["b", "50%"]
-ggplot(data = in.dat, aes(x = X.c, y = Y.c, col = toad.present)) +
-  geom_point() +
-  geom_abline(slope = line.slope, intercept = line.intercept)
+# Calculate samples
+ttd.samp.mat <- as.matrix(ttd.samp) # get samples
+x.seq <- seq(from = min(in.dat$X.c), to = max(in.dat$X.c), length.out = 100) # define a vecotr ox x-values
+out.mat <- matrix(NA, ncol = length(x.seq), nrow = nrow(ttd.samp.mat))
+for (ii in 1: nrow(ttd.samp.mat)){
+  out.mat[ii,] <- ttd.samp.mat[ii, "a"]*x.seq + ttd.samp.mat[ii, "b"]
+}
+# get quantiles
+preds <- apply(out.mat, 2, quantile, p = c(0.025, 0.5, 0.975)) |> 
+  t() |> 
+  bind_cols(x.seq = x.seq) |> 
+  as.data.frame()
 
+
+ggplot() +
+  geom_point(data = in.dat, aes(x = X.c, y = Y.c, col = toad.present)) +
+  geom_ribbon(data = preds, 
+              aes(x = x.seq, 
+                  ymin = `2.5%`, 
+                  ymax = `97.5%`),
+                  fill = "lightblue", 
+                  alpha = 0.3) +
+  geom_line(data = preds, 
+            aes(x = x.seq, 
+                y = `50%`)) +
+  coord_cartesian(ylim = range(in.dat$Y.c))
+  labs(x = "Easting", y = "Northing")
+ggsave(filename = "out/front-location.pdf")
