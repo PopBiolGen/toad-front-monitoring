@@ -3,8 +3,12 @@ library(tidyverse)
 library(readxl)
 library(sf)
 
+# Define local directory containing data files
+data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring")
+
 # 2025 visual survey data (from Fulcrum)
-df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys", layer = "toad_surveys") |>
+fpath.fulcrum <- file.path(data_dir, "2025/2025_visual-surveys")
+df.fulcrum <- st_read(dsn = fpath.fulcrum, layer = "toad_surveys") |>
   select(-(2:5), -photos, - audio, -X_latitude, -X_longitude) |>
   mutate(year = year(date),
          month = month(date),
@@ -15,7 +19,8 @@ df.fulcrum <- st_read(dsn = "dat/2025/2025_visual-surveys", layer = "toad_survey
   )
 
 #2023-4 visual survey data
-df.recon <- read_excel(path = "dat/invasion-front-reconnaissance-data.xlsx", sheet = "recon_data") |>
+fpath.recon <- file.path(data_dir, "invasion-front-reconnaissance-data.xlsx")
+df.recon <- read_excel(path = fpath.recon, sheet = "recon_data") |>
   mutate(hour = hour(time), 
          minute = minute(time), 
          date = as.Date(date)) |> 
@@ -42,7 +47,7 @@ df <- bind_rows(df.fulcrum, df.recon, df.ns) |>
 rm(df.recon, df.fulcrum, df.ns)
 
 # st_write(df.recon, "out/recon_sites.kml", append = FALSE)
-
+save(df, file = "out/merged-visual-surveys.RData")
 
 
 
