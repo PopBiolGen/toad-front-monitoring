@@ -6,6 +6,9 @@ library(sf)
 # Define local directory containing data files
 data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring")
 
+# check there is an output directory, and make one if it doesn't exist
+if (!dir.exists("out")) system("mkdir out")
+
 # 2025 visual survey data (from Fulcrum)
 fpath.fulcrum <- file.path(data_dir, "2025/2025_visual-surveys")
 df.fulcrum <- st_read(dsn = fpath.fulcrum, layer = "toad_surveys") |>
