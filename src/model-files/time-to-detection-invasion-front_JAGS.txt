@@ -16,6 +16,6 @@ model{
     
     # detected, or not, given occupancy and inferred distribution of time to detection
     is.detected[ii] ~ dbern(p.detect[ii]) # detected, or not
-    p.detect[ii] <- occ[ii]*(1-exp(-lambda*tmax.i[ii])) # probability of detection
+    p.detect[ii] <- occ[ii] * (is.interview[ii] + (1 - is.interview[ii]) * (1 - exp(-lambda * tmax.i[ii]))) # probability of detection
   }
 }
