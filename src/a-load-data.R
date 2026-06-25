@@ -62,6 +62,7 @@ rm(df.recon, df.fulcrum, df.ns)
 # st_write(df.recon, "out/recon_sites.kml", append = FALSE)
 save(df, file = "out/merged-visual-surveys.RData")
 
+source("src/map-toad-presence.R")
 
 
 # # get missing temperature data from SILO
