@@ -10,23 +10,31 @@ data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring"
 if (!dir.exists("out")) system("mkdir out")
 
 # 2025 visual survey data (from Fulcrum)
-fpath.fulcrum <- file.path(data_dir, "2025/2025_visual-surveys")
-df.fulcrum <- st_read(dsn = fpath.fulcrum, layer = "toad_surveys") |>
-  select(-(2:5), -photos, - audio, -X_latitude, -X_longitude) |>
-  mutate(year = year(date),
+fpath.fulcrum <- "https://web.fulcrumapp.com/shares/31b7089958c7ed6d.geojson"
+df.fulcrum <- st_read(fpath.fulcrum) |>
+  select(-(2:8), -photos, - audio, -latitude, -longitude, -project, -assigned_to) |>
+  mutate(date = as.Date(date),
+         time_of_day = hms::hms(hms(time_of_day)),
+         hour = hour(time_of_day), 
+         minute = minute(time_of_day), 
+         year = year(date),
          month = month(date),
          day = day(date),
-         temperature = as.numeric(temperatur),
+         temperature = as.numeric(temperature),
          water_available = "available",
-         survey_type = ifelse(how_many_p !=0, "nocturnal", "interview") 
-  )
+         how_many_people_are_searching = as.numeric(how_many_people_are_searching),
+         search_time_mins = as.numeric(search_time_mins),
+         survey_type = ifelse(how_many_people_are_searching !=0, "nocturnal", "interview")
+  ) |> 
+  rename(how_many_p = how_many_people_are_searching,
+         any_cane_t = any_cane_toads_found,
+         time = time_of_day)
 
 #2023-4 visual survey data
 fpath.recon <- file.path(data_dir, "invasion-front-reconnaissance-data.xlsx")
 df.recon <- read_excel(path = fpath.recon, sheet = "recon_data") |>
-  mutate(hour = hour(time), 
-         minute = minute(time), 
-         date = as.Date(date)) |> 
+  mutate(date = ymd(date),
+         time = hms::as_hms(time * 86400)) |> 
   st_as_sf(coords = c("X_longitude", "X_latitude")) |>
   st_set_crs(value = 4283) |> # set crs (GDA94/GRS 1980)
   st_transform(crs = st_crs(df.fulcrum)) # transform to whatever comes from fulcrum
@@ -42,8 +50,10 @@ df.ns <- data.frame(X_longitude = X.ns, X_latitude = Y.ns, any_cane_t = "yes") |
 
 # merge the datasets
 df <- bind_rows(df.fulcrum, df.recon, df.ns) |> 
-  mutate(search_tim = ifelse(search_tim==0, 0.5, search_tim), #ensure even small times are positive
-         person.minutes = how_many_p*search_tim,
+  mutate(hour = hour(time), 
+         minute = minute(time), 
+         search_time_mins = ifelse(search_time_mins==0, 0.5, search_time_mins), #ensure even small times are positive
+         person.minutes = how_many_p*search_time_mins,
          p.m.positive = ifelse(any_cane_t=="yes", person.minutes, NA), # only report person.minutes for positive sighting
          censored = as.numeric(any_cane_t=="no"), # censored, or not?
          toad.present = 1-censored) # toad present, or not 
