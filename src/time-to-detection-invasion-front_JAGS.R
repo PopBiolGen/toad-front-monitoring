@@ -9,17 +9,19 @@ library(tidyterra)
 
 
 # select the relevant data
-in.dat <- filter(df, water_available == "available" & survey_type %in% c("nocturnal", "interview")) |> 
+in.dat <- filter(df, water_available == "available" &
+                   survey_type %in% c("nocturnal", "interview")) |>
   filter(year == max(year) | toad.present == 1) |> # get latest year's data + any positive records from previous years
-  mutate(is.interview = as.integer(survey_type == "interview"),
-         person.minutes = if_else(survey_type == "interview", 0, person.minutes))
+  mutate(is.interview   = as.integer(survey_type == "interview"),
+         person.minutes = if_else(survey_type == "interview", 0, person.minutes),
+         p.m.positive   = if_else(survey_type == "interview", NA_real_, p.m.positive))
 
-# get x, y coordinates for each record, in metres and add to dataframe
-proj.coords <- in.dat |> 
-  st_transform(crs = 3577) |> # project to albers
-  st_coordinates()
+# project to Albers, scale to km, centre on grand mean
+proj.coords <- in.dat |>
+  st_transform(crs = 3577) |>
+  st_coordinates() / 1000  # metres -> km
 
-mean.coord <- colMeans(proj.coords) # make centre of study site the reference point
+mean.coord <- colMeans(proj.coords)
 proj.coords.centred <- sweep(proj.coords, 2, mean.coord, FUN = "-") |>
   as.data.frame() |> 
   rename(X.c = X, Y.c = Y)
@@ -34,9 +36,10 @@ data.list <- list(ttd = in.dat$p.m.positive, # time to detection data (NA's wher
                   n.obs = nrow(in.dat),
                   x = in.dat$X.c,
                   y = in.dat$Y.c)
-init.list <- list(lambda = 1/10, 
-                  a = -3,
-                  b = -100000)
+init.list <- list(lambda = 1/10,
+                  p.int  = 0.5,
+                  a      = 0,
+                  b      = min(in.dat$Y.c) - 1)
 
 # the model
 ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion-front_JAGS.txt", 
@@ -46,6 +49,7 @@ ttd.mod <- jags.model(file = "src/model-files/time-to-detection-invasion-front_J
 update(ttd.mod, n.iter = 5000) # burn in
 ttd.samp<-coda.samples(ttd.mod, 
                 variable.names = c("lambda",
+                                   "p.int",
                                    "a",
                                    "b"), 
                 n.iter = 10000, 

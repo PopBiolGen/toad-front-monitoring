@@ -1,21 +1,24 @@
 # time to detection model in JAGS
 # infers current location of the invasion front
+# coordinates in km (centred Albers)
 model{
   # priors
-  lambda ~ dunif(0, 1)
-  a ~ dnorm(0, 1e-8) # very flat given scale is in metres
-  b ~ dnorm(0, 1e-6) # could do better on this given history of invasion, but uninformative for now
-  
+  lambda ~ dunif(0, 1)       # nocturnal detection rate
+  p.int  ~ dunif(0, 1)       # interview detection probability (effort-independent)
+  a ~ dnorm(0, 1e-8)         # slope (dimensionless, km/km)
+  b ~ dnorm(0, 1e-4)         # intercept (SD ~100 km)
+
   for (ii in 1:n.obs){
     # time to detection
-    ttd[ii] ~ dexp(lambda) # time to detection, for sites with a detection
-    
+    ttd[ii] ~ dexp(lambda)
+
     # occupancy
-    occ[ii] <- step(d[ii]) #occupancy as a step function of distance from invasion front
-    d[ii] <- (y[ii]-a*x[ii]-b)/sqrt(1+a^2) # perpendicular distance to invasion front
-    
-    # detected, or not, given occupancy and inferred distribution of time to detection
-    is.detected[ii] ~ dbern(p.detect[ii]) # detected, or not
-    p.detect[ii] <- occ[ii] * (is.interview[ii] + (1 - is.interview[ii]) * (1 - exp(-lambda * tmax.i[ii]))) # probability of detection
+    occ[ii] <- step(d[ii])
+    d[ii] <- (y[ii]-a*x[ii]-b)/sqrt(1+a^2)
+
+    # detection probability depends on survey type
+    p.detect[ii] <- occ[ii] * (is.interview[ii] * p.int +
+                               (1 - is.interview[ii]) * (1 - exp(-lambda * tmax.i[ii])))
+    is.detected[ii] ~ dbern(p.detect[ii])
   }
 }
