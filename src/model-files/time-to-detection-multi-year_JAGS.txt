@@ -1,0 +1,31 @@
+# multi-year time to detection model in JAGS
+# estimates invasion front position in each year with a shared slope
+# coordinates in km (centred Albers)
+model {
+  # priors
+  lambda    ~ dunif(0, 1)       # nocturnal detection rate
+  p.int     ~ dunif(0, 1)       # interview detection probability (effort-independent)
+  a         ~ dnorm(0, 1e-8)    # shared slope (dimensionless, km/km)
+  for (tt in 1:n.years) {
+    b[tt] ~ dnorm(0, 1e-4)      # year-specific intercept (SD ~100 km)
+  }
+
+  # derived: perpendicular distance between consecutive year fronts (km)
+  for (tt in 1:(n.years - 1)) {
+    delta[tt] <- (b[tt + 1] - b[tt]) / sqrt(1 + a^2)
+  }
+
+  for (ii in 1:n.obs) {
+    # time to detection (latent for non-detections and interview surveys)
+    ttd[ii] ~ dexp(lambda)
+
+    # occupancy as a step function of distance from that year's front
+    occ[ii] <- step(d[ii])
+    d[ii] <- (y[ii] - a*x[ii] - b[year.idx[ii]]) / sqrt(1 + a^2)
+
+    # detection probability depends on survey type
+    p.detect[ii] <- occ[ii] * (is.interview[ii] * p.int +
+                               (1 - is.interview[ii]) * (1 - exp(-lambda * tmax.i[ii])))
+    is.detected[ii] ~ dbern(p.detect[ii])
+  }
+}
