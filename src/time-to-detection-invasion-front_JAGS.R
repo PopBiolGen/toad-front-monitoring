@@ -16,10 +16,11 @@ in.dat <- filter(df, water_available == "available" &
          person.minutes = if_else(survey_type == "interview", 0, person.minutes),
          p.m.positive   = if_else(survey_type == "interview", NA_real_, p.m.positive))
 
+scale <- 1000
 # project to Albers, scale to km, centre on grand mean
 proj.coords <- in.dat |>
   st_transform(crs = 3577) |>
-  st_coordinates() / 1000  # metres -> km
+  st_coordinates() / scale  # metres -> km
 
 mean.coord <- colMeans(proj.coords)
 proj.coords.centred <- sweep(proj.coords, 2, mean.coord, FUN = "-") |>
@@ -60,12 +61,12 @@ gelman.diag(ttd.samp)
 coda::densplot(ttd.samp)
 
 # save parameters out
-save(mod1, mean.coord, file = file.path(Sys.getenv("DATA_PATH"), "invasion-front-parameters.Rdata"))
+save(mod1, mean.coord, scale, file = file.path(Sys.getenv("DATA_PATH"), "invasion-front-parameters.Rdata"))
 
 # make a plot of estimated line
 # Calculate samples
 ttd.samp.mat <- as.matrix(ttd.samp) # get samples
-x.seq <- seq(from = min(in.dat$X.c), to = max(in.dat$X.c), length.out = 100) # define a vecotr ox x-values
+x.seq <- seq(from = min(in.dat$X.c), to = max(in.dat$X.c), length.out = 100) # define a vector of x-values
 out.mat <- matrix(NA, ncol = length(x.seq), nrow = nrow(ttd.samp.mat))
 for (ii in 1: nrow(ttd.samp.mat)){
   out.mat[ii,] <- ttd.samp.mat[ii, "a"]*x.seq + ttd.samp.mat[ii, "b"]
@@ -95,17 +96,18 @@ ggsave(filename = "out/front-location.pdf")
 
 # make a map of the estimated line
 ## predictions as sf
-pred_to_sf <- function(X, Y, re.centre){
+pred_to_sf <- function(X, Y, re.centre, re.scale){
   data.frame(X = X, Y = Y) |> 
     sweep(2, re.centre, FUN = "+") |> #move back to original centre
+    sweep(2, re.scale, FUN = "*") |> 
     st_as_sf(coords = c("X", "Y"),
              crs = 3577) |> 
     st_transform(crs = 4326)
 }
 # line and upper/lower
-predn <- pred_to_sf(preds$x, preds$y, mean.coord) |> st_combine() |> st_cast("LINESTRING")
-upp <- pred_to_sf(preds$x, preds$y_upper, mean.coord)
-low <- pred_to_sf(preds$x, preds$y_lower, mean.coord)
+predn <- pred_to_sf(preds$x, preds$y, mean.coord, scale) |> st_combine() |> st_cast("LINESTRING")
+upp <- pred_to_sf(preds$x, preds$y_upper, mean.coord, scale)
+low <- pred_to_sf(preds$x, preds$y_lower, mean.coord, scale)
 # survey points
 points.p <- st_transform(in.dat, crs = 4326)
 

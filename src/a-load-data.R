@@ -34,7 +34,7 @@ df.fulcrum <- st_read(fpath.fulcrum) |>
 fpath.recon <- file.path(data_dir, "invasion-front-reconnaissance-data.xlsx")
 df.recon <- read_excel(path = fpath.recon, sheet = "recon_data") |>
   mutate(date = ymd(date),
-         time = hms::as_hms(time * 86400)) |> 
+         time = hms::as_hms(time)) |> 
   st_as_sf(coords = c("X_longitude", "X_latitude")) |>
   st_set_crs(value = 4283) |> # set crs (GDA94/GRS 1980)
   st_transform(crs = st_crs(df.fulcrum)) # transform to whatever comes from fulcrum
