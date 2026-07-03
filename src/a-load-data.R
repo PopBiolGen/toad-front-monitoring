@@ -4,17 +4,12 @@ library(readxl)
 library(sf)
 
 # Define local directory containing data files
-<<<<<<< Updated upstream
-data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring")
-=======
 is_windows <- Sys.info()[["sysname"]] == "Windows" # are we on windows machine, or not?
 if (is_windows) {
   data_dir <- file.path(Sys.getenv("DATA_PATH"), "invasion-front-monitoring")
 } else {
   data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring")
 } # workaround for Windows demands for shortcut
-
->>>>>>> Stashed changes
 
 # check there is an output directory, and make one if it doesn't exist
 if (!dir.exists("out")) system("mkdir out")
