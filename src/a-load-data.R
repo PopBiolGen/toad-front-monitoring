@@ -4,7 +4,13 @@ library(readxl)
 library(sf)
 
 # Define local directory containing data files
-data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring")
+is_windows <- Sys.info()[["sysname"]] == "Windows" # are we on windows machine, or not?
+if (is_windows) {
+  data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads.lnk/invasion-front-monitoring")
+} else {
+  data_dir <- file.path(Sys.getenv("DATA_PATH"), "Toads/invasion-front-monitoring")
+} # workaround for Windows demands for shortcut
+
 
 # check there is an output directory, and make one if it doesn't exist
 if (!dir.exists("out")) system("mkdir out")
@@ -32,6 +38,7 @@ df.fulcrum <- st_read(fpath.fulcrum) |>
 
 #2023-4 visual survey data
 fpath.recon <- file.path(data_dir, "invasion-front-reconnaissance-data.xlsx")
+
 df.recon <- read_excel(path = fpath.recon, sheet = "recon_data") |>
   mutate(date = ymd(date),
          time = hms::as_hms(time)) |> 
