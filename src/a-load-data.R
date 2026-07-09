@@ -15,6 +15,60 @@ if (is_windows) {
 # check there is an output directory, and make one if it doesn't exist
 if (!dir.exists("out")) system("mkdir out")
 
+# Clulow's data (2022-2024)
+fpath.clulow <- file.path(data_dir, "clulow-data") # for the Clulow data
+  ## All surveyed sites summarised into presence/absence
+all.summ <- read_excel(path = file.path(fpath.clulow, "cane_toad_pr_ab_surveys.xlsx")) |> 
+  rename(present = 'presence/absence',
+         site.name = site) |> 
+  mutate(present = as.numeric(present == "yes"),
+         date = as.Date(date),
+         month = month(date)) 
+
+  ## Subset of surveyed sites with encounter rates
+sub.23 <- read_excel(path = file.path(fpath.clulow, "2023_Honours_allSurvey_siteLevel_cleaned.xlsx"),
+                     skip = 1) |> 
+  select(contains("site"), lat, long, date = dt_start_vis, survey_length, temp = air_temp_vis, total_count) |> 
+  mutate(date = as.Date(date),
+         year = year(date),
+         month = month(date)) 
+names(sub.23) <- gsub(pattern = "_", replacement = ".", names(sub.23))
+
+sub.24.meta <- read_excel(path = file.path(fpath.clulow, "2024_Rmar24_visual-surveys_cleaned.xlsx"),
+                     skip = 1, sheet = "site metadata") |> 
+  select(contains("Site"), lat = Latitude, long = Longitude, date = Date) |> 
+  rename(site = Site, site.name = 'Site name') |> 
+  mutate(date = as.Date(date),
+         year = year(date),
+         month = month(date)) |> 
+  select(-contains("comments"))
+names(sub.24.meta) <- tolower(make.names(names(sub.24.meta)))
+
+sub.24 <- read_excel(path = file.path(fpath.clulow, "2024_Rmar24_visual-surveys_cleaned.xlsx"),
+                          skip = 1, sheet = "site survey data") |> 
+  select(contains("Site"), 
+         'Time of Day (start)', 
+         'Surey length (numeric minutes)', 
+         'Air Temp (°C)', 
+         Total_count) |> 
+  rename(site = 'Site code', 
+         site.name = 'Site Name', 
+         time = 'Time of Day (start)',
+         survey.length = 'Surey length (numeric minutes)',
+         temp = 'Air Temp (°C)',
+         total.count = Total_count) |> 
+  select(-contains("minute"))
+names(sub.24) <- tolower(gsub("_", ".", make.names(names(sub.24))))
+
+sub.24 <- left_join(sub.24, sub.24.meta); rm(sub.24.meta)
+sub.all <- bind_rows(sub.23, sub.24); rm(sub.23, sub.24)
+
+df.clulow <- full_join(all.summ, sub.all) |> 
+  filter(!is.na(date)) |> 
+  mutate(present = ifelse(present==1 & total.count==0, 0, present)) |> # remove eDNA positives
+  st_as_sf(crs = 4326, coords = c('lat', 'long')) # assume WGS84
+rm(all.summ, sub.all)
+
 # 2025 visual survey data (from Fulcrum)
 fpath.fulcrum <- "https://web.fulcrumapp.com/shares/31b7089958c7ed6d.geojson"
 df.fulcrum <- st_read(fpath.fulcrum) |>
@@ -36,7 +90,7 @@ df.fulcrum <- st_read(fpath.fulcrum) |>
          any_cane_t = any_cane_toads_found,
          time = time_of_day)
 
-#2023-4 visual survey data
+#2023-4 visual survey data (Ben and Tim)
 fpath.recon <- file.path(data_dir, "invasion-front-reconnaissance-data.xlsx")
 
 df.recon <- read_excel(path = fpath.recon, sheet = "recon_data") |>
