@@ -65,14 +65,16 @@ sub.all <- bind_rows(sub.23, sub.24); rm(sub.23, sub.24)
 
 df.clulow <- full_join(all.summ, sub.all) |> 
   filter(!is.na(date)) |> 
-  mutate(present = ifelse(present==1 & total.count==0, 0, present)) |> # remove eDNA positives
+  mutate(toad.present = ifelse(present==1 & total.count==0, 0, present), # remove eDNA positives
+         search_time_minutes = ifelse(is.na(survey.length), 15, survey.length), # default survey length for
+         person.minutes = 2*survey.length) |> # two observers in all surveys, walking separately
   st_as_sf(crs = 4326, coords = c('lat', 'long')) # assume WGS84
 rm(all.summ, sub.all)
 
 # 2025 visual survey data (from Fulcrum)
 fpath.fulcrum <- "https://web.fulcrumapp.com/shares/31b7089958c7ed6d.geojson"
 df.fulcrum <- st_read(fpath.fulcrum) |>
-  select(-(2:8), -photos, - audio, -latitude, -longitude, -project, -assigned_to) |>
+  select(-(2:8), -contains("photos"), -contains("audio"), -contains("gps"), -latitude, -longitude, -project, -assigned_to) |>
   mutate(date = as.Date(date),
          time_of_day = hms::hms(hms(time_of_day)),
          hour = hour(time_of_day), 
@@ -88,7 +90,8 @@ df.fulcrum <- st_read(fpath.fulcrum) |>
   ) |> 
   rename(how_many_p = how_many_people_are_searching,
          any_cane_t = any_cane_toads_found,
-         time = time_of_day)
+         time = time_of_day,
+         location_n = location_namedescription)
 
 #2023-4 visual survey data (Ben and Tim)
 fpath.recon <- file.path(data_dir, "invasion-front-reconnaissance-data.xlsx")
