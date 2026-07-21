@@ -28,10 +28,12 @@ all.summ <- read_excel(path = file.path(fpath.clulow, "cane_toad_pr_ab_surveys.x
   ## Subset of surveyed sites with encounter rates
 sub.23 <- read_excel(path = file.path(fpath.clulow, "2023_Honours_allSurvey_siteLevel_cleaned.xlsx"),
                      skip = 1) |> 
-  select(contains("site"), lat, long, date = dt_start_vis, survey_length, temp = air_temp_vis, total_count) |> 
+  select(contains("site"), lat, long, date = dt_start_vis, survey_length, temp = air_temp_vis, total_count, eDNA = PCRrep_prop_detect) |> 
   mutate(date = as.Date(date),
          year = year(date),
-         month = month(date)) 
+         month = month(date)) |> 
+  filter(!(eDNA>0 & total_count == 0)) |>  # remove records with only positive eDNA
+  select(-eDNA)
 names(sub.23) <- gsub(pattern = "_", replacement = ".", names(sub.23))
 
 sub.24.meta <- read_excel(path = file.path(fpath.clulow, "2024_Rmar24_visual-surveys_cleaned.xlsx"),
@@ -65,10 +67,10 @@ sub.all <- bind_rows(sub.23, sub.24); rm(sub.23, sub.24)
 
 df.clulow <- full_join(all.summ, sub.all) |> 
   filter(!is.na(date)) |> 
-  mutate(toad.present = ifelse(present==1 & total.count==0, 0, present), # remove eDNA positives
-         search_time_minutes = ifelse(is.na(survey.length), 15, survey.length), # default survey length for
-         person.minutes = 2*survey.length) |> # two observers in all surveys, walking separately
-  st_as_sf(crs = 4326, coords = c('lat', 'long')) # assume WGS84
+  mutate(search_time_minutes = ifelse(is.na(survey.length), 15, survey.length), # default survey length for
+         person.minutes = 2*search_time_minutes) |> # two observers in all surveys, walking separately
+  rename(toad.present = present) |> 
+  st_as_sf(crs = 4326, coords = c('long', 'lat')) # assume WGS84
 rm(all.summ, sub.all)
 
 # 2025 visual survey data (from Fulcrum)
@@ -113,7 +115,7 @@ df.ns <- data.frame(X_longitude = X.ns, X_latitude = Y.ns, any_cane_t = "yes") |
   st_transform(crs = st_crs(df.fulcrum))
 
 # merge the datasets
-df <- bind_rows(df.fulcrum, df.recon, df.ns) |> 
+df <- bind_rows(df.fulcrum, df.recon) |> 
   mutate(hour = hour(time), 
          minute = minute(time), 
          search_time_mins = ifelse(search_time_mins==0, 0.5, search_time_mins), #ensure even small times are positive

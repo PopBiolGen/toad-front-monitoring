@@ -28,4 +28,21 @@ model {
                                (1 - is.interview[ii]) * (1 - exp(-lambda * tmax.i[ii])))
     is.detected[ii] ~ dbern(p.detect[ii])
   }
+
+  # Clulow count observations: Poisson likelihood
+  # count in T person-minutes ~ Poisson(lambda * T) given presence
+  for (jj in 1:n.obs.count) {
+    occ.c[jj] <- step(d.c[jj])
+    d.c[jj]   <- (y.c[jj] - a*x.c[jj] - b[year.idx.c[jj]]) / sqrt(1 + a^2)
+    # small offset avoids a zero-rate Poisson when occ.c = 0
+    count.c[jj] ~ dpois((occ.c[jj] + 1e-10) * tmax.c[jj] * lambda)
+  }
+
+  # Clulow PA-only observations: Bernoulli with TTD-based detection probability
+  for (kk in 1:n.obs.pa) {
+    occ.pa[kk]    <- step(d.pa[kk])
+    d.pa[kk]      <- (y.pa[kk] - a*x.pa[kk] - b[year.idx.pa[kk]]) / sqrt(1 + a^2)
+    p.det.pa[kk]  <- occ.pa[kk] * (1 - exp(-lambda * tmax.pa[kk]))
+    is.det.pa[kk] ~ dbern(p.det.pa[kk])
+  }
 }
