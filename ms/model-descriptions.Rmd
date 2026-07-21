@@ -1,51 +1,86 @@
 ---
 title: "Model Descriptions"
 author: "Ben Phillips"
-date: "2026-03-10"
+date: "2026-07-21"
 output: html_document
 ---
 
-## Detection model
+## Overview
 
-We index year with $k$, site with $j$, and observations (individual surveys) with $i$.
+We fit a Bayesian occupancy model to estimate the position of the cane toad invasion front in each year. The model combines three types of survey data collected across multiple years: nocturnal time-to-detection (TTD) surveys, informal landholder interviews, and fixed-effort visual count surveys (Clulow et al.). All three data types are linked through a common encounter rate parameter $\lambda$ and a shared geometric model of the invasion front.
 
-For nocturnal surveys, we record the time to detection at each survey. For sites with a detection, let time to detection be $^dt_{i}$.
+We index years with $k$, and individual observations with $i$ (TTD and interview surveys) or $j$ (count surveys).
 
-We let $^dt_{i} \sim \text{Exp}(\lambda)$.
-
-Let survey time be $^vt_{i}$.
-
-For a given survey effort (in time) then, the conditional probability of detection, i.e. $P(\text{detect} | \text{present} \cap \text{nocturnal survey}) = 1-e^{-\lambda ^vt_{i}}$.
-
-We also have another method for detecting toads, which are informal interviews of landholders. For these, we simply set $P(\text{detect} | \text{present} \cap \text{interview}) = p$
+------------------------------------------------------------------------
 
 ## Occupancy model
 
-So now we need a model for whether toads are present, or not in a given year.
+We model the invasion front as a straight line in two-dimensional space (projected coordinates, Albers equal-area, centred and scaled to km):
 
-We assume a straight line invasion front defined by $y_k = ax+b_k$. That is, a straight line with an intercept that varies between years. The perpendicular distance between site, $j$, and our line is given by:
+$$y_k = ax + b_k$$
 
-$$d_{jk} = \frac{(y_j-ax_j-b_k)}{\sqrt{1+a^2}}$$
+where $a$ is a slope shared across all years and $b_k$ is a year-specific intercept. The perpendicular (signed) distance from observation site $(x, y)$ to the year-$k$ front is:
 
-We then define a simple step function that determines occupancy relative to the line.
+$$d_{ik} = \frac{y_i - ax_i - b_k}{\sqrt{1+a^2}}$$
 
-$$H(d_{jk}) = 
-\begin{cases}
-1 & \text{if } d_{jk} \geq 0 \\ 
-0 & \text{if } d_{jk} < 0 
-\end{cases}$$
+Occupancy — whether toads are present at a site — is a deterministic step function of this distance. Sites on the toad side of the front ($d_{ik} \geq 0$) are occupied; sites beyond the front ($d_{ik} < 0$) are not:
 
-This gives us our final probability of detection:
+$$H(d_{ik}) = \begin{cases} 1 & d_{ik} \geq 0 \\ 0 & d_{ik} < 0 \end{cases}$$
 
-$p_{ijk} = H(d_{jk})\times p_i$ where,
+This deterministic occupancy assumption is appropriate given the highly aggregated nature of the invasion and the relatively coarse spatial scale of the analysis.
 
-$$p_i =
-\begin{cases}
-p & \text{if } \text{interview} \\
-e^{-\lambda^vt_i} & \text{if } \text{survey}
-\end{cases}
-$$
+------------------------------------------------------------------------
 
-We then specify our likelihood of observing toads as:
+## Detection model
 
-$$o_{ijk} \sim \text{Bernoulli}(p_{ijk})$$
+All survey types share a common toad encounter rate $\lambda$ (toads detected per person-minute), which parameterises detection probability under a Poisson encounter process. The three survey types each contribute a different observation likelihood.
+
+### Nocturnal TTD surveys
+
+For nocturnal visual surveys, observers search until the first toad is detected and record the elapsed person-minutes at that point. Under a Poisson encounter process with rate $\lambda$, the time to first detection $t^d_i$ follows an exponential distribution:
+
+$$t^d_i \sim \text{Exp}(\lambda)$$
+
+For surveys with a detection, $t^d_i$ is observed directly. For surveys with no detection, $t^d_i$ is treated as a latent variable — the sampler integrates over all values consistent with the exponential prior and the observed non-detection.
+
+The probability of at least one detection during a survey of total duration $t^v_i$, given presence, is:
+
+$$P(\text{detect} \mid \text{present}) = 1 - e^{-\lambda t^v_i}$$
+
+The binary detection outcome $o_i$ is therefore:
+
+$$o_i \sim \text{Bernoulli}\!\left(H(d_{ik}) \cdot \left[1 - e^{-\lambda t^v_i}\right]\right)$$
+
+### Interview surveys
+
+Landholders were asked whether they had observed cane toads at their property. For these surveys, detection probability is not a function of search effort. We assign a constant detection probability $p$:
+
+$$o_i \sim \text{Bernoulli}\!\left(H(d_{ik}) \cdot p\right)$$
+
+### Fixed-effort count surveys (Clulow)
+
+A separate dataset (Clulow et al.) consists of standardised visual surveys in which two observers searched independently for 15 minutes (total effort $T_j = 30$ person-minutes), recording the total number of toads seen. Under the same Poisson encounter process, the expected count given presence is $\lambda T_j$, so:
+
+$$c_j \sim \text{Poisson}\!\left(H(d_{jk}) \cdot T_j \cdot \lambda\right)$$
+
+This is consistent with the TTD likelihood: both are derived from a Poisson process with rate $\lambda$. The exponential TTD distribution arises from the waiting time to the first event of this process, while the count distribution arises from the number of events in a fixed window. The count data are therefore complementary to — and share the same $\lambda$ as — the TTD data, while being more informative about $\lambda$ because they capture the full count distribution rather than only whether a toad was detected.
+
+A subset of Clulow sites have only presence/absence records (no count data). For these sites we use the same Bernoulli likelihood as for nocturnal surveys, with effort fixed at $T_j = 30$ person-minutes:
+
+$$o_j \sim \text{Bernoulli}\!\left(H(d_{jk}) \cdot \left[1 - e^{-\lambda T_j}\right]\right)$$
+
+------------------------------------------------------------------------
+
+## Priors
+
+$$\lambda \sim \text{Uniform}(0, 1)$$ $$p \sim \text{Uniform}(0, 1)$$ $$a \sim \text{Normal}(0, 10^{-8}) \quad \text{(effectively flat on the scale of interest)}$$ $$b_k \sim \text{Normal}(0, 10^{-4}) \quad \text{(SD} \approx 100 \text{ km)}$$
+
+------------------------------------------------------------------------
+
+## Derived quantities
+
+The perpendicular distance the front moved between year $k$ and year $k+1$ is:
+
+$$\delta_k = \frac{b_{k+1} - b_k}{\sqrt{1+a^2}}$$
+
+Positive values of $\delta_k$ indicate southward (inland) advance; negative values indicate retreat. We report the posterior distribution of $\delta_k$ for each consecutive year pair as a measure of annual front movement.
