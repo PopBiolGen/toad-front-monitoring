@@ -9,10 +9,7 @@ library(tidyterra)
 # 1. Data preparation -------------------------------------------------------
 
 in.dat <- filter(df, water_available == "available" &
-                   survey_type %in% c("nocturnal", "interview")) |>
-  mutate(is.interview   = as.integer(survey_type == "interview"),
-         person.minutes = if_else(survey_type == "interview", 0, person.minutes),
-         p.m.positive   = if_else(survey_type == "interview", NA_real_, p.m.positive))
+                   survey_type == "nocturnal")
 
 years   <- sort(unique(in.dat$year))
 n.years <- length(years)
@@ -63,11 +60,10 @@ year.idx.pa    <- match(clulow.pa$year,    years.all)
 # 2. JAGS data and inits ----------------------------------------------------
 
 data.list <- list(
-  # existing TTD / interview data
+  # TTD survey data
   ttd          = in.dat$p.m.positive,
   is.detected  = in.dat$toad.present,
   tmax.i       = in.dat$person.minutes,
-  is.interview = in.dat$is.interview,
   year.idx     = year.idx,
   n.years      = n.years.all,
   n.obs        = nrow(in.dat),
@@ -91,7 +87,6 @@ data.list <- list(
 
 init.list <- list(
   lambda = 1/10,
-  p.int  = 0.5,
   a      = 0,
   b      = rep(min(in.dat$Y.c) - 1, n.years.all)
 )
@@ -108,7 +103,7 @@ update(ttd.mod, n.iter = 5000) # burn in
 
 ttd.samp <- coda.samples(
   ttd.mod,
-  variable.names = c("lambda", "p.int", "a", "b", "delta"),
+  variable.names = c("lambda", "a", "b", "delta"),
   n.iter = 10000,
   thin   = 5
 )

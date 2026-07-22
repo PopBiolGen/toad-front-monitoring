@@ -7,9 +7,9 @@ output: html_document
 
 ## Overview
 
-We fit a Bayesian occupancy model to estimate the position of the cane toad invasion front in each year. The model combines three types of survey data collected across multiple years: nocturnal time-to-detection (TTD) surveys, informal landholder interviews, and fixed-effort visual count surveys (Clulow et al.). All three data types are linked through a common encounter rate parameter $\lambda$ and a shared geometric model of the invasion front.
+We fit a Bayesian occupancy model to estimate the position of the cane toad invasion front in each year. The model combines two types of survey data collected across multiple years: nocturnal time-to-detection (TTD) surveys, and fixed-effort visual count surveys (Clulow et al.). Both data types are linked through a common encounter rate parameter $\lambda$ and a shared geometric model of the invasion front.
 
-We index years with $k$, and individual observations with $i$ (TTD and interview surveys) or $j$ (count surveys).
+We index years with $k$, and individual observations with $i$ (TTD surveys) or $j$ (count surveys).
 
 ------------------------------------------------------------------------
 
@@ -51,12 +51,6 @@ The binary detection outcome $o_i$ is therefore:
 
 $$o_i \sim \text{Bernoulli}\!\left(H(d_{ik}) \cdot \left[1 - e^{-\lambda t^v_i}\right]\right)$$
 
-### Interview surveys
-
-Landholders were asked whether they had observed cane toads at their property. For these surveys, detection probability is not a function of search effort. We assign a constant detection probability $p$:
-
-$$o_i \sim \text{Bernoulli}\!\left(H(d_{ik}) \cdot p\right)$$
-
 ### Fixed-effort count surveys (Clulow)
 
 A separate dataset (Clulow et al.) consists of standardised visual surveys in which two observers searched independently for 15 minutes (total effort $T_j = 30$ person-minutes), recording the total number of toads seen. Under the same Poisson encounter process, the expected count given presence is $\lambda T_j$, so:
@@ -73,7 +67,9 @@ $$o_j \sim \text{Bernoulli}\!\left(H(d_{jk}) \cdot \left[1 - e^{-\lambda T_j}\ri
 
 ## Priors
 
-$$\lambda \sim \text{Uniform}(0, 1)$$ $$p \sim \text{Uniform}(0, 1)$$ $$a \sim \text{Normal}(0, 10^{-8}) \quad \text{(effectively flat on the scale of interest)}$$ $$b_k \sim \text{Normal}(0, 10^{-4}) \quad \text{(SD} \approx 100 \text{ km)}$$
+$$\lambda \sim \text{Uniform}(0, 1)$$
+$$a \sim \text{Normal}(0, 10^{-8}) \quad \text{(effectively flat on the scale of interest)}$$
+$$b_k \sim \text{Normal}(0, 10^{-4}) \quad \text{(SD} \approx 100 \text{ km)}$$
 
 ------------------------------------------------------------------------
 
