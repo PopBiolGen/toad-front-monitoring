@@ -1,4 +1,4 @@
-# After running a-load-data.R, this will map the point data and output a .shp for import into GIS.
+# After running a-load-data.R, this will map the point data and output a GeoJSON for import into GIS (e.g. Fulcrum).
 
 library(dplyr)
 library(sf)
@@ -18,9 +18,10 @@ obs_all <- bind_rows(
   filter(!is.na(toad.present)) |>
   mutate(
     year     = as.integer(year),
-    presence = ifelse(toad.present == 1, "Present", "Absent")
+    presence = ifelse(toad.present == 1, "Present", "Absent"),
+    label    = paste0(presence, " - ", year, " (", dataset, ")")
   ) |>
-  select(year, presence, dataset)
+  select(year, presence, dataset, label)
 
 # Static map -----------------------------------------------------------------
 wa_border <- ozmap_states |> filter(NAME == "Western Australia")
@@ -42,4 +43,4 @@ print(p_static)
 ggsave("out/map-toad-presence.pdf", plot = p_static, width = 180, height = 150, units = "mm")
 
 # Export point data ------------------------------------------------------------
-st_write(obs_all, "out/all-observations.shp", append = FALSE)
+st_write(obs_all, "out/all-observations.kml", append = FALSE)
