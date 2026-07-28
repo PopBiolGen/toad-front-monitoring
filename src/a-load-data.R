@@ -89,7 +89,8 @@ df.hrc <- st_read(fpath.fulcrum.hrc) |>
   ) |>
   rename(how_many_p = how_many_people_are_searching,
          any_cane_t = any_cane_toads_found,
-         time = time_of_day)
+         time = time_of_day) |>
+  mutate(toad.present = as.numeric(any_cane_t == "yes"))
 
 # 2025 visual survey data (from Fulcrum)
 fpath.fulcrum <- "https://web.fulcrumapp.com/shares/31b7089958c7ed6d.geojson"
