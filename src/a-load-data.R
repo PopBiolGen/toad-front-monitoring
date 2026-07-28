@@ -73,6 +73,24 @@ df.clulow <- full_join(all.summ, sub.all) |>
   st_as_sf(crs = 4326, coords = c('long', 'lat')) # assume WGS84
 rm(all.summ, sub.all)
 
+# 2026 visual survey data from Harry's work
+fpath.fulcrum.hrc <- "https://web.fulcrumapp.com/shares/8e29186100065353.geojson"
+df.hrc <- st_read(fpath.fulcrum.hrc) |> 
+  select(fulcrum_id, date, time_of_day, temperature, how_many_people_are_searching, any_cane_toads_found) |>
+  mutate(date = as.Date(date),
+         time_of_day = hms::hms(hms(time_of_day)),
+         hour = hour(time_of_day),
+         minute = minute(time_of_day),
+         year = year(date),
+         month = month(date),
+         day = day(date),
+         temperature = as.numeric(temperature),
+         how_many_people_are_searching = as.numeric(how_many_people_are_searching)
+  ) |>
+  rename(how_many_p = how_many_people_are_searching,
+         any_cane_t = any_cane_toads_found,
+         time = time_of_day)
+
 # 2025 visual survey data (from Fulcrum)
 fpath.fulcrum <- "https://web.fulcrumapp.com/shares/31b7089958c7ed6d.geojson"
 df.fulcrum <- st_read(fpath.fulcrum) |>
