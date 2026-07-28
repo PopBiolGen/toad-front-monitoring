@@ -67,9 +67,7 @@ $$o_j \sim \text{Bernoulli}\!\left(H(d_{jk}) \cdot \left[1 - e^{-\lambda T_j}\ri
 
 ## Priors
 
-$$\lambda \sim \text{Uniform}(0, 1)$$
-$$a \sim \text{Normal}(0, 10^{-8}) \quad \text{(effectively flat on the scale of interest)}$$
-$$b_k \sim \text{Normal}(0, 10^{-4}) \quad \text{(SD} \approx 100 \text{ km)}$$
+$$\lambda \sim \text{Uniform}(0, 1)$$ $$a \sim \text{Normal}(0, 10^{-8}) \quad \text{(effectively flat on the scale of interest)}$$ $$b_k \sim \text{Normal}(0, 10^{-4}) \quad \text{(SD} \approx 100 \text{ km)}$$
 
 ------------------------------------------------------------------------
 
