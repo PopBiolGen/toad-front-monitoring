@@ -5,6 +5,9 @@ library(sf)
 library(ggplot2)
 library(maptiles)
 library(tidyterra)
+library(digest)
+
+MODEL_NAME <- "time-to-detection-multi-year"
 
 # 1. Data preparation -------------------------------------------------------
 
@@ -15,10 +18,11 @@ years   <- sort(unique(in.dat$year))
 n.years <- length(years)
 year.idx <- match(in.dat$year, years)
 
+scale <- 1000
 # project to Albers, scale to km, centre on grand mean
 proj.coords <- in.dat |>
   st_transform(crs = 3577) |>
-  st_coordinates() / 1000  # metres -> km
+  st_coordinates() / scale  # metres -> km
 
 mean.coord <- colMeans(proj.coords)
 proj.coords.centred <- sweep(proj.coords, 2, mean.coord, FUN = "-") |>
@@ -35,7 +39,7 @@ clulow.clean <- df.clulow |>
 # Re-project to Albers, scale to km, centre on the SAME mean.coord as in.dat
 clulow.coords <- clulow.clean |>
   st_transform(crs = 3577) |>
-  st_coordinates() / 1000
+  st_coordinates() / scale
 
 clulow.coords.centred <- sweep(clulow.coords, 2, mean.coord, FUN = "-") |>
   as.data.frame() |>
@@ -108,11 +112,28 @@ ttd.samp <- coda.samples(
   thin   = 5
 )
 
-gelman.diag(ttd.samp)
+gd <- gelman.diag(ttd.samp)
+print(gd)
+psrf.max <- max(gd$psrf[, 1], na.rm = TRUE)
+
 (mod.multi <- summary(ttd.samp))
 coda::densplot(ttd.samp)
 
-save(mod.multi, mean.coord, years.all,
+if (psrf.max > 1.1) {
+  stop("Chains have not converged (max PSRF = ", round(psrf.max, 3), ") - inspect before saving")
+}
+
+# save parameters out, with provenance so a later forecast run can be traced
+# back to the data/convergence state that produced it
+run.info <- list(
+  model_name = MODEL_NAME,
+  run_date   = Sys.time(),
+  n_obs      = nrow(in.dat) + nrow(clulow.clean),
+  data_hash  = digest(list(st_drop_geometry(in.dat), clulow.clean)),
+  max_psrf   = psrf.max
+)
+
+save(mod.multi, mean.coord, scale, years.all, run.info,
      file = file.path(Sys.getenv("DATA_PATH"), "invasion-front-parameters-multi-year.Rdata"))
 
 # 4. Generate per-year predictions ------------------------------------------
@@ -126,7 +147,7 @@ x.seq <- seq(from = min(c(in.dat$X.c, clulow.clean$X.c)),
 pred_to_sf <- function(X, Y, re.centre, yr) {
   data.frame(X = X, Y = Y) |>
     sweep(2, re.centre, FUN = "+") |>
-    (\(d) d * 1000)() |>        # km -> metres for Albers CRS
+    (\(d) d * scale)() |>        # km -> metres for Albers CRS
     st_as_sf(coords = c("X", "Y"), crs = 3577) |>
     st_transform(crs = 4326) |>
     mutate(year = yr)

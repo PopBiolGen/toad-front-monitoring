@@ -2,10 +2,13 @@
 # uses latest year's data + presences from previous years
 source("src/a-load-data.R")
 library(rjags)
+library(digest)
 
 library(maptiles)
 library(stars)
 library(tidyterra)
+
+MODEL_NAME <- "time-to-detection-invasion-front"
 
 
 # select the relevant data
@@ -55,13 +58,28 @@ ttd.samp<-coda.samples(ttd.mod,
                                    "b"), 
                 n.iter = 10000, 
                 thin = 5)
-gelman.diag(ttd.samp)
+gd <- gelman.diag(ttd.samp)
+print(gd)
+psrf.max <- max(gd$psrf[, 1], na.rm = TRUE)
 
 (mod1 <- summary(ttd.samp))
 coda::densplot(ttd.samp)
 
-# save parameters out
-save(mod1, mean.coord, scale, file = file.path(Sys.getenv("DATA_PATH"), "invasion-front-parameters.Rdata"))
+if (psrf.max > 1.1) {
+  stop("Chains have not converged (max PSRF = ", round(psrf.max, 3), ") - inspect before saving")
+}
+
+# save parameters out, with provenance so a later forecast run can be traced
+# back to the data/convergence state that produced it
+run.info <- list(
+  model_name = MODEL_NAME,
+  run_date   = Sys.time(),
+  n_obs      = nrow(in.dat),
+  data_hash  = digest(st_drop_geometry(in.dat)),
+  max_psrf   = psrf.max
+)
+save(mod1, mean.coord, scale, run.info,
+     file = file.path(Sys.getenv("DATA_PATH"), "invasion-front-parameters.Rdata"))
 
 # make a plot of estimated line
 # Calculate samples

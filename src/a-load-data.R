@@ -15,6 +15,30 @@ if (is_windows) {
 # check there is an output directory, and make one if it doesn't exist
 if (!dir.exists("out")) system("mkdir out")
 
+# Fetch a Fulcrum share as geojson, caching a local copy so an annual re-run
+# still works if the share link has moved/expired or the network is down at
+# the moment someone needs to regenerate the front/forecast
+fetch_fulcrum_geojson <- function(url, cache_name,
+                                   cache_dir = file.path(data_dir, "fulcrum-cache")) {
+  if (!dir.exists(cache_dir)) dir.create(cache_dir, recursive = TRUE)
+  cache_file <- file.path(cache_dir, paste0(cache_name, ".rds"))
+
+  out <- tryCatch(st_read(url, quiet = TRUE), error = function(e) e)
+
+  if (inherits(out, "error")) {
+    if (!file.exists(cache_file)) {
+      stop("Could not fetch '", cache_name, "' from Fulcrum and no cached copy exists at ",
+           cache_file, ": ", conditionMessage(out))
+    }
+    warning("Could not fetch '", cache_name, "' from Fulcrum (", conditionMessage(out),
+            "); falling back to cached copy from ", file.info(cache_file)$mtime)
+    return(readRDS(cache_file))
+  }
+
+  saveRDS(out, cache_file)
+  out
+}
+
 # Clulow's data (2022-2024)
 fpath.clulow <- file.path(data_dir, "clulow-data") # for the Clulow data
   ## All surveyed sites summarised into presence/absence
@@ -75,7 +99,7 @@ rm(all.summ, sub.all)
 
 # 2026 visual survey data from Harry's work
 fpath.fulcrum.hrc <- "https://web.fulcrumapp.com/shares/8e29186100065353.geojson"
-df.hrc <- st_read(fpath.fulcrum.hrc) |> 
+df.hrc <- fetch_fulcrum_geojson(fpath.fulcrum.hrc, "hrc-2026") |>
   select(fulcrum_id, date, time_of_day, temperature, how_many_people_are_searching, any_cane_toads_found) |>
   mutate(date = as.Date(date),
          time_of_day = hms::hms(hms(time_of_day)),
@@ -94,7 +118,7 @@ df.hrc <- st_read(fpath.fulcrum.hrc) |>
 
 # 2025 visual survey data (from Fulcrum)
 fpath.fulcrum <- "https://web.fulcrumapp.com/shares/31b7089958c7ed6d.geojson"
-df.fulcrum <- st_read(fpath.fulcrum) |>
+df.fulcrum <- fetch_fulcrum_geojson(fpath.fulcrum, "fulcrum-2025") |>
   select(-(2:8), -contains("photos"), -contains("audio"), -contains("gps"), -latitude, -longitude, -project, -assigned_to) |>
   mutate(date = as.Date(date),
          time_of_day = hms::hms(hms(time_of_day)),
