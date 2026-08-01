@@ -42,13 +42,7 @@ Fulcrum share URL (geojson) at run time — network access is required.
 Some model scripts also write fitted parameters back out to `$DATA_PATH` (not into `out/`), e.g.
 `invasion-front-parameters.Rdata`, `invasion-front-parameters-multi-year.Rdata`.
 
-### Sibling repo dependency
-
-`src/annual-forecast/annual-forecast.R` and `annual-forecast-data-prep.R` source files and load data from
-a **sibling repository** at `../spread-model` (relative to this project directory) — e.g.
-`../spread-model/src/pprocess_functions.R` and `../spread-model/dat/Posteriors.RData`. These scripts will
-not run unless that repo is checked out alongside this one, and `annual-forecast.R` temporarily `setwd()`s
-into it while running simulations before switching back.
+See `src/annual-forecast/CLAUDE.md` for the sibling-repo dependency of the annual-forecast scripts.
 
 ## Architecture
 
