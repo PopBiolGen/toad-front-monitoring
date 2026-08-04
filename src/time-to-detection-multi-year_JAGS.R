@@ -103,7 +103,7 @@ ttd.mod <- jags.model(
   inits   = init.list,
   n.chains = 3
 )
-update(ttd.mod, n.iter = 5000) # burn in
+update(ttd.mod, n.iter = 10000) # burn in
 
 ttd.samp <- coda.samples(
   ttd.mod,
