@@ -112,6 +112,11 @@ ttd.samp <- coda.samples(
   thin   = 5
 )
 
+# full posterior draws (all chains pooled) -- saved below alongside the summary so
+# downstream consumers (e.g. the TCZ-sims null-model comparison) can work with the
+# full a/b[k]/delta[k] distributions rather than just point estimates/CIs
+post.samples <- as.matrix(ttd.samp)
+
 gd <- gelman.diag(ttd.samp)
 print(gd)
 psrf.max <- max(gd$psrf[, 1], na.rm = TRUE)
@@ -133,12 +138,22 @@ run.info <- list(
   max_psrf   = psrf.max
 )
 
-save(mod.multi, mean.coord, scale, years.all, run.info,
+# bounding box (Albers metres, EPSG:3577) of the pooled data the front model was fit
+# to -- lets a downstream consumer (e.g. a null-model simulation over a larger point
+# network) restrict any re-fit of the front line to the same spatial window the
+# empirical line was estimated over, rather than the full simulated extent
+bbox.fit <- c(
+  xmin = min(c(proj.coords[, "X"], clulow.coords[, "X"])) * scale,
+  xmax = max(c(proj.coords[, "X"], clulow.coords[, "X"])) * scale,
+  ymin = min(c(proj.coords[, "Y"], clulow.coords[, "Y"])) * scale,
+  ymax = max(c(proj.coords[, "Y"], clulow.coords[, "Y"])) * scale
+)
+
+save(mod.multi, post.samples, bbox.fit, mean.coord, scale, years.all, run.info,
      file = file.path(Sys.getenv("DATA_PATH"), "invasion-front-parameters-multi-year.Rdata"))
 
 # 4. Generate per-year predictions ------------------------------------------
 
-ttd.samp.mat <- as.matrix(ttd.samp)
 x.seq <- seq(from = min(c(in.dat$X.c, clulow.clean$X.c)),
              to   = max(c(in.dat$X.c, clulow.clean$X.c)),
              length.out = 100)
@@ -160,9 +175,9 @@ for (tt in seq_len(n.years.all)) {
   yr <- years.all[tt]
   b.col <- paste0("b[", tt, "]")
 
-  out.mat <- matrix(NA, ncol = length(x.seq), nrow = nrow(ttd.samp.mat))
-  for (ii in seq_len(nrow(ttd.samp.mat))) {
-    out.mat[ii, ] <- ttd.samp.mat[ii, "a"] * x.seq + ttd.samp.mat[ii, b.col]
+  out.mat <- matrix(NA, ncol = length(x.seq), nrow = nrow(post.samples))
+  for (ii in seq_len(nrow(post.samples))) {
+    out.mat[ii, ] <- post.samples[ii, "a"] * x.seq + post.samples[ii, b.col]
   }
 
   preds.yr <- apply(out.mat, 2, quantile, p = c(0.025, 0.5, 0.975)) |>
@@ -251,7 +266,7 @@ ggsave("out/multi-year-front.pdf", width = 200, height = 150, units = "mm")
 
 # 6. Posterior of front movement between consecutive years ------------------
 
-delta.df <- ttd.samp.mat[, grep("^delta", colnames(ttd.samp.mat)), drop = FALSE] |>
+delta.df <- post.samples[, grep("^delta", colnames(post.samples)), drop = FALSE] |>
   as.data.frame() |>
   setNames(as.character(years.all[-n.years.all])) |>  # starting year of each interval
   tidyr::pivot_longer(everything(), names_to = "starting_year", values_to = "distance_km") |>
