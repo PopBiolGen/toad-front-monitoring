@@ -173,25 +173,17 @@ save(df, file = "out/merged-visual-surveys.RData")
 
 source("src/map-toad-presence.R")
 
+# Spatial layers
+spatial.dir <- file.path(Sys.getenv("DATA_PATH"), "GIS - General", "GIS_layers_read_only/")
 
-# # get missing temperature data from SILO
-# fetch_temps <- function(df){
-#   for (nn in 1:nrow(df)){
-#     if (!is.na(df$temperature[nn])) next
-#     wd <- weatherOz::get_data_drill(
-#       latitude = df$lat[nn],
-#       longitude = df$lon[nn],
-#       start_date = df$date[nn],
-#       end_date = df$date[nn],
-#       values = c(
-#         "max_temp",
-#         "min_temp",
-#         "rh_tmax"
-#       ),
-#       api_key = Sys.getenv("SILO_API_KEY")
-#     )
-#   }
-#   }
+pastoral.boundaries <- st_read(dsn = "../TCZ-sims/out/pastoral-boundaries.shp") |> # pastoral boundaries
+  st_transform(crs = 4326) |> # align with df's CRS, same convention as df.recon above
+  st_make_valid() # public admin shapefiles like this commonly have minor topology errors that
+                   # trip up s2-backed operations (st_within etc.) downstream otherwise
+nta.boundaries <- st_read(dsn = file.path(spatial.dir,
+                                          "Native_Title_Determination_LGATE_066_WA_GDA94_Public_Shapefile/Native_Title_Determination_LGATE_066.shp")) |> # native title area boundaries
+  st_transform(crs = 4326) |>
+  st_make_valid()
 
 
 
