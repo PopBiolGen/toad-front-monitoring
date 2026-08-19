@@ -9,3 +9,4 @@ dat/2023/Landholders.xlsx
 *.pdf
 .positai
 *.html
+.renviron
