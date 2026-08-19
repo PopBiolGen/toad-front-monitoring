@@ -425,6 +425,14 @@ submissions <- df_mig |>
     row_id,
     site_id,
     label = sites_out$label[match(site_id, sites_out$site_id)],
+    site_name = sites_out$site_name[match(site_id, sites_out$site_id)],
+    site_lat = sites_out$latitude[match(site_id, sites_out$site_id)],
+    site_lon = sites_out$longitude[match(site_id, sites_out$site_id)],
+    waterpoint_type = sites_out$waterpoint_type[match(site_id, sites_out$site_id)],
+    waterpoint_type_other = sites_out$waterpoint_type_other[match(site_id, sites_out$site_id)],
+    water_origin = sites_out$water_origin[match(site_id, sites_out$site_id)],
+    native_title_area = sites_out$native_title_area[match(site_id, sites_out$site_id)],
+    property = sites_out$property[match(site_id, sites_out$site_id)],
     is_new_site = "no",
     visit_date = format(date, "%Y-%m-%d"),
     visit_time = sprintf("%02d:%02d", hour, minute),
@@ -466,13 +474,14 @@ build_submission_xml <- function(rec) {
 <toad_detection_survey id="toad_detection_survey">
   <is_new_site>{esc_xml(rec$is_new_site)}</is_new_site>
   <site_id>{esc_xml(rec$site_id)}</site_id>
-  <site_name></site_name>
-  <site_lat></site_lat>
-  <site_lon></site_lon>
-  <waterpoint_type></waterpoint_type>
-  <waterpoint_type_other></waterpoint_type_other>
-  <water_origin></water_origin>
-  <native_title_area></native_title_area>
+  <site_name>{esc_xml(rec$site_name)}</site_name>
+  <site_lat>{ifelse(is.na(rec$site_lat), "", rec$site_lat)}</site_lat>
+  <site_lon>{ifelse(is.na(rec$site_lon), "", rec$site_lon)}</site_lon>
+  <waterpoint_type>{esc_xml(rec$waterpoint_type)}</waterpoint_type>
+  <waterpoint_type_other>{esc_xml(rec$waterpoint_type_other)}</waterpoint_type_other>
+  <water_origin>{esc_xml(rec$water_origin)}</water_origin>
+  <native_title_area>{esc_xml(rec$native_title_area)}</native_title_area>
+  <property>{esc_xml(rec$property)}</property>
   <visit_date>{esc_xml(rec$visit_date)}</visit_date>
   <visit_time>{esc_xml(rec$visit_time)}</visit_time>
   <temperature_c>{ifelse(is.na(rec$temperature_c), "", rec$temperature_c)}</temperature_c>
